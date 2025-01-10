@@ -1,41 +1,42 @@
 pipeline {
     agent any
+
     environment {
-        CHART_PATH = "deployments/helm-chart" // Đường dẫn đến Helm Chart trong repository mới
+        DOCKER_IMAGE = 'nginx-app'
+        DOCKER_REGISTRY = 'docker.io/daihq1'
+        BRANCH = 'main'
+        IMAGE_TAG = "${GIT_COMMIT}"
     }
+
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                echo 'Cloning repository...'
-                git url: 'https://github.com/daihq04/jenkins.git', branch: 'main'
+                // Lấy mã nguồn từ Git repository
+                git branch: "${BRANCH}", url: 'https://github.com/daihq04/jenkins.git'
             }
         }
-        stage('Lint Helm Chart') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Running Helm Lint...'
-                sh "helm lint ${CHART_PATH}"
+                // Xây dựng Docker image từ Dockerfile
+                script {
+                    docker.build("${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${IMAGE_TAG}")
+                }
             }
         }
-        stage('Package Helm Chart') {
+        stage('Push Docker Image') {
             steps {
-                echo 'Packaging Helm Chart...'
-                sh "helm package ${CHART_PATH}"
-                archiveArtifacts artifacts: '*.tgz', allowEmptyArchive: false
-            }
-        }
-        stage('Test Helm Template') {
-            steps {
-                echo 'Testing Helm Template...'
-                sh "helm template nginx ${CHART_PATH} --debug"
+                // Đẩy Docker image lên Docker Registry
+                script {
+                    docker.push("${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${IMAGE_TAG}")
+                }
             }
         }
     }
+
     post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed!'
+        always {
+            // Dọn dẹp workspace nếu cần
+            cleanWs()
         }
     }
 }
