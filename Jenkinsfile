@@ -1,42 +1,24 @@
 pipeline {
     agent any
-
     environment {
-        DOCKER_IMAGE = 'nginx-app'
-        DOCKER_REGISTRY = 'docker.io/daihq1'
-        BRANCH = 'main'
-        IMAGE_TAG = "${GIT_COMMIT}"
+        DOCKER_IMAGE = 'daihq1/nginx-app:v1'
     }
-
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                // Lấy mã nguồn từ Git repository
-                git branch: "${BRANCH}", url: 'https://github.com/daihq04/jenkins.git'
+                git branch: 'main', url: 'https://github.com/daihq04/jenkins.git'
             }
         }
         stage('Build Docker Image') {
             steps {
-                // Xây dựng Docker image từ Dockerfile
-                script {
-                    docker.build("${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${IMAGE_TAG}")
-                }
+                sh 'docker build -t $DOCKER_IMAGE .'
             }
         }
         stage('Push Docker Image') {
             steps {
-                // Đẩy Docker image lên Docker Registry
-                script {
-                    docker.push("${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${IMAGE_TAG}")
-                }
+                sh 'docker login -u daihq1 -p Abc@123456'
+                sh 'docker push $DOCKER_IMAGE'
             }
-        }
-    }
-
-    post {
-        always {
-            // Dọn dẹp workspace nếu cần
-            cleanWs()
         }
     }
 }
